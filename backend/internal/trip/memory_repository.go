@@ -22,6 +22,9 @@ func (r *MemoryRepository) Create(ctx context.Context, trip Trip) error {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if _, exists := r.trips[trip.ID]; exists {
+		return ErrDuplicateID
+	}
 	r.trips[trip.ID] = trip
 	return nil
 }

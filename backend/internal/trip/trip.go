@@ -21,7 +21,9 @@ var (
 
 // Date represents a calendar day without a time of day or timezone.
 type Date struct {
-	value time.Time
+	year  int
+	month time.Month
+	day   int
 }
 
 func ParseDate(value string) (Date, error) {
@@ -30,19 +32,32 @@ func ParseDate(value string) (Date, error) {
 		return Date{}, fmt.Errorf("must use YYYY-MM-DD: %w", err)
 	}
 
-	return Date{value: parsed}, nil
+	if parsed.Format(dateLayout) != value {
+		return Date{}, errors.New("date must use YYYY-MM-DD")
+	}
+
+	return Date{year: parsed.Year(), month: parsed.Month(), day: parsed.Day()}, nil
 }
 
 func (d Date) String() string {
-	return d.value.Format(dateLayout)
+	if d.IsZero() {
+		return ""
+	}
+	return fmt.Sprintf("%04d-%02d-%02d", d.year, d.month, d.day)
 }
 
 func (d Date) IsZero() bool {
-	return d.value.IsZero()
+	return d.year == 0
 }
 
 func (d Date) Before(other Date) bool {
-	return d.value.Before(other.value)
+	if d.year != other.year {
+		return d.year < other.year
+	}
+	if d.month != other.month {
+		return d.month < other.month
+	}
+	return d.day < other.day
 }
 
 // Trip is a planned visit whose dates bound future itinerary items and gap filling.

@@ -5,7 +5,10 @@ import (
 	"errors"
 )
 
-var ErrNotFound = errors.New("trip not found")
+var (
+	ErrNotFound    = errors.New("trip not found")
+	ErrDuplicateID = errors.New("trip ID already exists")
+)
 
 // Repository persists trips independently of the transport and use-case layers.
 type Repository interface {

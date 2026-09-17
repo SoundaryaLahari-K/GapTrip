@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -25,7 +26,7 @@ func TestHTTPCreateTrip(t *testing.T) {
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("status = %d; want %d; body = %s", recorder.Code, http.StatusCreated, recorder.Body.String())
 	}
-	if got := recorder.Header().Get("Location"); !strings.HasPrefix(got, "/v1/trips/trip_") {
+	if got := recorder.Header().Get("Location"); !regexp.MustCompile(`^/v1/trips/trip_[0-9a-f-]{36}$`).MatchString(got) {
 		t.Errorf("Location = %q; want a trip resource location", got)
 	}
 	var response tripResponse
@@ -34,6 +35,33 @@ func TestHTTPCreateTrip(t *testing.T) {
 	}
 	if response.Name != "Summer break" || response.StartsOn != "2026-06-10" {
 		t.Errorf("response = %+v; want created trip", response)
+	}
+}
+
+func TestHTTPCreateTripValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		body      string
+		wantField string
+	}{
+		{"missing name", `{"destination":"Lisbon","startsOn":"2026-06-10","endsOn":"2026-06-15"}`, "name"},
+		{"missing destination", `{"name":"Summer break","startsOn":"2026-06-10","endsOn":"2026-06-15"}`, "destination"},
+		{"missing startsOn", `{"name":"Summer break","destination":"Lisbon","endsOn":"2026-06-15"}`, "startsOn"},
+		{"missing endsOn", `{"name":"Summer break","destination":"Lisbon","startsOn":"2026-06-10"}`, "endsOn"},
+		{"ends before starts", `{"name":"Summer break","destination":"Lisbon","startsOn":"2026-06-15","endsOn":"2026-06-10"}`, "endsOn"},
+		{"invalid date", `{"name":"Summer break","destination":"Lisbon","startsOn":"2026-06-10T12:00:00Z","endsOn":"2026-06-15"}`, "startsOn"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, handler := newTestServer()
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/v1/trips", strings.NewReader(test.body)))
+			response := assertErrorResponse(t, recorder, http.StatusBadRequest, "validation_error")
+			if response.Error.Field != test.wantField {
+				t.Errorf("error field = %q; want %q", response.Error.Field, test.wantField)
+			}
+		})
 	}
 }
 
@@ -86,7 +114,7 @@ func TestHTTPCreateTripRejectsMultipleJSONObjects(t *testing.T) {
 	assertErrorResponse(t, recorder, http.StatusBadRequest, "invalid_request")
 }
 
-func assertErrorResponse(t *testing.T, recorder *httptest.ResponseRecorder, wantStatus int, wantCode string) {
+func assertErrorResponse(t *testing.T, recorder *httptest.ResponseRecorder, wantStatus int, wantCode string) errorResponse {
 	t.Helper()
 	if recorder.Code != wantStatus {
 		t.Fatalf("status = %d; want %d; body = %s", recorder.Code, wantStatus, recorder.Body.String())
@@ -98,4 +126,5 @@ func assertErrorResponse(t *testing.T, recorder *httptest.ResponseRecorder, want
 	if response.Error.Code != wantCode {
 		t.Errorf("error code = %q; want %q", response.Error.Code, wantCode)
 	}
+	return response
 }
