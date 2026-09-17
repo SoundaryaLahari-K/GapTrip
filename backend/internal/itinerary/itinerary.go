@@ -110,3 +110,7 @@ func (t TimeOfDay) String() string {
 	}
 	return fmt.Sprintf("%02d:%02d", t.hour, t.minute)
 }
+
+// Minutes returns the number of minutes since midnight. It is intended for
+// deterministic schedule calculations; callers should check IsZero first.
+func (t TimeOfDay) Minutes() int { return t.hour*60 + t.minute }
