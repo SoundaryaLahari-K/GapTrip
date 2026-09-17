@@ -126,7 +126,8 @@ func (Ranker) Rank(gap Gap, candidates []Candidate, preferred []place.Category) 
 			score += 5
 			reasons = append(reasons, "Preferred category")
 		}
-		out = append(out, Suggestion{"suggestion_" + gap.DayID + "_" + c.Place.ID, gap, c.Place, score, reasons, c.DistanceKM})
+		id := fmt.Sprintf("suggestion_%s_%04d_%04d_%s", gap.DayID, gap.StartTime.Minutes(), gap.DurationMinutes, c.Place.ID)
+		out = append(out, Suggestion{id, gap, c.Place, score, reasons, c.DistanceKM})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Score == out[j].Score {

@@ -2,6 +2,7 @@ package planner
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,11 +19,17 @@ func plannerHandler(t *testing.T) http.Handler {
 	if err := days.Create(context.Background(), itinerary.Day{ID: "day_1"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := activities.Create(context.Background(), activity(t, "activity_1", "09:00", "10:00")); err != nil {
+	breakfast, err := itinerary.NewActivity("activity_1", "day_1", "Breakfast", timeValue(t, "09:00"), timeValue(t, "10:00"), "", true)
+	if err != nil {
 		t.Fatal(err)
 	}
-	// The activity helper uses "day"; use a real day ID for this HTTP fixture.
-	a, _ := itinerary.NewActivity("activity_2", "day_1", "Lunch", timeValue(t, "12:00"), timeValue(t, "13:00"), "", true)
+	if err := activities.Create(context.Background(), breakfast); err != nil {
+		t.Fatal(err)
+	}
+	a, err := itinerary.NewActivity("activity_2", "day_1", "Lunch", timeValue(t, "12:00"), timeValue(t, "13:00"), "", true)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := activities.Create(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
@@ -36,6 +43,18 @@ func TestGapsEndpoint(t *testing.T) {
 	plannerHandler(t).ServeHTTP(w, r)
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"startTime":"00:00"`) || !strings.Contains(w.Body.String(), `"endTime":"24:00"`) {
 		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var body struct {
+		Gaps []struct {
+			StartTime, EndTime string
+			DurationMinutes    int
+		}
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Gaps) != 3 || body.Gaps[1].StartTime != "10:00" || body.Gaps[1].EndTime != "12:00" || body.Gaps[1].DurationMinutes != 120 {
+		t.Fatalf("expected middle 10:00-12:00 gap, got %#v", body.Gaps)
 	}
 }
 func TestSuggestionsEndpointAndErrors(t *testing.T) {

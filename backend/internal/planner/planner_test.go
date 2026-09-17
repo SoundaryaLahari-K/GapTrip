@@ -76,8 +76,16 @@ func TestRankerInputsAndTieBreak(t *testing.T) {
 		t.Fatalf("unexpected ranking: %#v", got)
 	}
 }
+func TestRankerUsesDistinctIDsForSamePlaceAcrossGaps(t *testing.T) {
+	candidate := Candidate{Place: place.Place{ID: "cafe", AverageVisitMinutes: 30, Rating: 4.5}}
+	first := (Ranker{}).Rank(Gap{DayID: "day", StartTime: timeValue(t, "09:00"), DurationMinutes: 60}, []Candidate{candidate}, nil)
+	second := (Ranker{}).Rank(Gap{DayID: "day", StartTime: timeValue(t, "12:00"), DurationMinutes: 60}, []Candidate{candidate}, nil)
+	if first[0].ID == second[0].ID {
+		t.Fatalf("suggestion IDs must be unique per gap and place: %q", first[0].ID)
+	}
+}
 func TestDistanceKM(t *testing.T) {
-	d := DistanceKM(place.Location{0, 0}, place.Location{0, 1})
+	d := DistanceKM(place.Location{Latitude: 0, Longitude: 0}, place.Location{Latitude: 0, Longitude: 1})
 	if d < 111 || d > 112 {
 		t.Fatalf("distance=%f", d)
 	}
