@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/SoundaryaLahari-K/trippie/internal/trip"
 )
 
 func main() {
@@ -13,6 +15,11 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	tripRepository := trip.NewMemoryRepository()
+	tripService := trip.NewService(tripRepository)
+	tripHandler := trip.NewHTTPHandler(tripService)
+	tripHandler.RegisterRoutes(mux)
 
 	server := &http.Server{
 		Addr:    ":8080",
