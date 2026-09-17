@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/SoundaryaLahari-K/trippie/internal/itinerary"
+	"github.com/SoundaryaLahari-K/trippie/internal/place"
+	"github.com/SoundaryaLahari-K/trippie/internal/planner"
 	"github.com/SoundaryaLahari-K/trippie/internal/trip"
 )
 
@@ -22,8 +24,11 @@ func main() {
 	tripHandler := trip.NewHTTPHandler(tripService)
 	tripHandler.RegisterRoutes(mux)
 
-	itineraryHandler := itinerary.NewHTTPHandler(itinerary.NewService(tripRepository, itinerary.NewMemoryItineraryRepository(), itinerary.NewMemoryDayRepository(), itinerary.NewMemoryActivityRepository()))
+	dayRepository := itinerary.NewMemoryDayRepository()
+	activityRepository := itinerary.NewMemoryActivityRepository()
+	itineraryHandler := itinerary.NewHTTPHandler(itinerary.NewService(tripRepository, itinerary.NewMemoryItineraryRepository(), dayRepository, activityRepository))
 	itineraryHandler.RegisterRoutes(mux)
+	planner.NewHTTPHandler(planner.NewService(dayRepository, activityRepository, place.SeedDemoRepository())).RegisterRoutes(mux)
 
 	server := &http.Server{
 		Addr:    ":8080",
