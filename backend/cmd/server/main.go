@@ -35,7 +35,7 @@ func main() {
 		Handler: mux,
 	}
 
-	log.Println("Trippie API listening on :8080")
+	log.Println("Pinky API listening on :8080")
 
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
