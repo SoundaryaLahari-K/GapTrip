@@ -35,7 +35,7 @@ func main() {
 		Handler: mux,
 	}
 
-	log.Println("Trippie API listening on :8080")
+	log.Println("GapTrip API listening on :8080")
 
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
